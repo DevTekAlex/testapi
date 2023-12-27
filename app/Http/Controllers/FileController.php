@@ -44,42 +44,64 @@ class FileController extends Controller
         return response()->json([
             'message' => 'File uploaded successfully.',
             'download_url' => url('/download/'.$fileData->secret_key)
-        ]);
+        ], 200);
     }
 
 
 
     public function getFiles() {
-        $files = FileData::orderBy('created_at', 'desc')->get();
-        return response()->json(['files' => $files]);
+        try {
+            $files = FileData::all();
+            return response()->json(['files' => $files], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'An error occurred while receiving files.'], 500);
+        }
     }
 
 
     public function updateDescription(Request $request, $id) {
-        $request->validate(['description' => 'required|string|max:500']);
+        try {
+            $request->validate(['description' => 'required|string|max:500']);
 
-        $file = FileData::findOrFail($id);
-        $file->update(['description' => $request->description]);
+            $file = FileData::findOrFail($id);
+            $file->update(['description' => $request->description]);
 
-        return response()->json(['message' => 'File description updated.']);
+            return response()->json(['message' => 'File description updated.'], 200);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['error' => $e->errors()], 422);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['error' => 'File not found.'], 404);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'An error occurred while updating the file description.'], 500);
+        }
     }
 
     public function deleteFile($id) {
-        $file = FileData::findOrFail($id);
-        Storage::delete($file->file_path);
-        $file->delete();
+        try {
+            $file = FileData::findOrFail($id);
+            Storage::delete($file->file_path);
+            $file->delete();
 
-        return response()->json(['message' => 'File deleted.']);
+            return response()->json(['message' => 'File deleted.']);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['error' => 'File not found.'], 404);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'An error occurred while deleting the file.'], 500);
+        }
     }
 
     public function deleteAllFiles() {
-        $files = FileData::all();
-        foreach ($files as $file) {
-            Storage::delete($file->file_path);
-            $file->delete();
-        }
+        try {
+            $files = FileData::all(['file_path']);
+            foreach ($files as $file) {
+                Storage::delete($file->file_path);
+            }
+            FileData::truncate();
 
-        return response()->json(['message' => 'All files deleted.']);
+            return response()->json(['message' => 'All files deleted.']);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'An error occurred while deleting all files.'], 500);
+        }
     }
 
     public function download($secretKey) {
