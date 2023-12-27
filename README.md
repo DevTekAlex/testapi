@@ -37,8 +37,8 @@ json params:
 
 Delete file by id
 
-http://test.loc/api/files/{id-file}
+http://sitename/api/files/{id-file}
 
 Delete all files
 
-http://test.loc/api/files
+http://sitename/api/files
